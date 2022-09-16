@@ -115,53 +115,41 @@ class BudgetBook {
 	}
 	
 	function entry($type,$id,$conn){
-	    $this->html = "Eintrag hinzufügen / bearbeiten";
-	    $this->html.= "<form action='?' method='get'>";
-	    $this->html.=' <div class="row">
-                          <div class="col-2 col-sm-1">Datum</div>
-                          <div class="col-2 col-sm-1"><input type="text" name="datum" id="datepicker"></div>';
-        $this->html.=' <div class="row">
-                          <div class="col-3 col-sm-1">betrag</div>
-                          <div class="col-3 col-sm-2"><input type="text" id="betrag" name="betrag"></div>';   
+	    $t="new";
+	    if ($type == "edit"){
+	        $sql="select * from history where id = '".$id."'";
+	        $result = $conn->query($sql);
+            if ($result->num_rows > 0) {
+              $i=0;
+              $row = $result->fetch_assoc();
+            }
+            $new_date_array=explode("-", $row['datum']);
+	        $new_date_correct=$new_date_array[2].".".$new_date_array[1].".".$new_date_array[0];
+	        $t="edit";
+	    }
+	    $this->html ="Eintrag hinzufügen / bearbeiten";
+	    $this->html.="<form action='?' method='get'>";
+	    $this->html.="<div class='row'><div class='col-2 col-sm-1'>Datum</div>";
+        $this->html.="<div class='col-2 col-sm-1'><input type='text' name='datum' value='".$new_date_correct."' id='datepicker'></div>";
+        $this->html.="<div class='row'><div class='col-3 col-sm-1'>betrag</div>";
+        $this->html.="<div class='col-3 col-sm-2'><input type='text' id='betrag' name='betrag' value='".$row['betrag']."'></div>";   
         $this->html.="<div class='col-3 col-sm-2'><select name='debit' id='debit'><option value='-'>-</option><option value='+'>+</option></select></div>";
         $rows_add = array('was','wo','info');
          for ($i=0;$i<=count($rows_add)-1;$i++){
 	            $this->html.="<div class='w-100'></div>";
                 $this->html.="<div class='col-2 col-sm-1'>".$rows_add[$i]."</div>";
-                $this->html.="<div class='col-2 col-sm-1'><input type='text' id='".$rows_add[$i]."' name='".$rows_add[$i]."'></div>";
+                $this->html.="<div class='col-2 col-sm-1'><input type='text' id='".$rows_add[$i]."' value='".$row[$rows_add[$i]]."' name='".$rows_add[$i]."'></div>";
         }
         $this->html.="<input type='hidden' name='h' value='put'>";
+        $this->html.="<input type='hidden' name='t' value='".$t."'>";
+        $this->html.="<input type='hidden' name='id' value='".$row['id']."'>";
         $this->html.="<div class='w-100'></div>";
 	    $this->html.="<div class='col-1 col-sm-1'><input type='submit' value='Submit'></div>";           
-        $this->html.='</div>';
+        $this->html.="</div>";
         $this->html.="</form>";
         return true;
 	}
 	
-	function add(){
-	        $this->html = "Eintrag hinzufügen<br>";
-	        $rows_add = array('datum','was','art','wo','betrag','info');
-	        $this->html.= "<table border='1'> <tr>";
-	        for ($i=0;$i<=count($rows_add)-1;$i++){
-	            $this->html.="<td>".$rows_add[$i]."</td>";
-            }
-            $this->html.="<td>+/-</td>";
-	        $this->html.= "<form action='?' method='get'>";
-            $this->html.= "</tr><tr>";
-            for ($i=0;$i<=count($rows_add)-1;$i++){
-                if ($rows_add[$i]=='datum'){
-	                $this->html.="<td><input type='text' name='datum' id='datepicker'></td>";
-	            } else {
-                    $this->html.="<td> <input type='text' id='".$rows_add[$i]."' name='".$rows_add[$i]."'></td>";
-	            }
-            }
-            $this->html.="<input type='hidden' name='h' value='put'>";
-            $this->html.="<td><select name='debit' id='debit'><option value='-'>-</option><option value='+'>+</option></select></td>";
-	        $this->html.= "</tr><tr><td colspan='".count($rows_add)."'><input type='submit' value='Submit'></td></tr></form></table>";
-	        return true;
-  
-	}
-
 	function put($values,$conn){
 	        $sql = "INSERT INTO history (datum, was, art, wo, betrag, info, debit) VALUES (";
 	        $new_date_array=explode(".", $values['datum']);
