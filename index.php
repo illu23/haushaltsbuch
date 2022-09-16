@@ -4,8 +4,8 @@
 
 // database
 $servername = "db";
-$username = "db";
-$password = "changeme";
+$username = "root";
+$password = "eskuhell";
 $dbname = "haushalt";
 
 // Create connection
@@ -17,13 +17,35 @@ if ($conn->connect_error) {
 
 class BudgetBook {
 	public $html;
-	function view($conn) {
-			$this->html = "Ein und Ausgaben der letzten 6 Monate<br>";
+
+    function button($type) {
+        switch($type){
+            case 'edit': $button= '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24"><path fill="none" d="M0 0h24v24H0z"/><path d="M6.414 16L16.556 5.858l-1.414-1.414L5 14.586V16h1.414zm.829 2H3v-4.243L14.435 2.322a1 1 0 0 1 1.414 0l2.829 2.829a1 1 0 0 1 0 1.414L7.243 18zM3 20h18v2H3v-2z" fill="rgba(0,0,0,1)"/></svg>';
+                break;
+            case 'kill': $button= '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24"><path fill="none" d="M0 0h24v24H0z"/><path d="M17 6h5v2h-2v13a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V8H2V6h5V3a1 1 0 0 1 1-1h8a1 1 0 0 1 1 1v3zm1 2H6v12h12V8zm-4.586 6l1.768 1.768-1.414 1.414L12 15.414l-1.768 1.768-1.414-1.414L10.586 14l-1.768-1.768 1.414-1.414L12 12.586l1.768-1.768 1.414 1.414L13.414 14zM9 4v2h6V4H9z"/></svg>';
+                break;
+            case 'debt_minus': $button= '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24"><path fill="none" d="M0 0h24v24H0z"/><path d="M12 22C6.477 22 2 17.523 2 12S6.477 2 12 2s10 4.477 10 10-4.477 10-10 10zm0-2a8 8 0 1 0 0-16 8 8 0 0 0 0 16zm-5-9h10v2H7v-2z"/></svg>';
+                break;
+            case 'debt_plus': $button= '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24"><path fill="none" d="M0 0h24v24H0z"/><path d="M11 11V7h2v4h4v2h-4v4h-2v-4H7v-2h4zm1 11C6.477 22 2 17.523 2 12S6.477 2 12 2s10 4.477 10 10-4.477 10-10 10zm0-2a8 8 0 1 0 0-16 8 8 0 0 0 0 16z"/></svg>';
+                break;
+        }
+        return $button;
+    }
+
+
+	function overview($conn) {
+	        $this->last_months(6,$conn);
+            $this->table_print("now",$conn,50);
+			return true;
+	}
+	
+	function last_months($months,$conn){
+			$this->html = "Ein und Ausgaben der letzten ".$months." Monate<br>";
 			$this->html.="<table class='table table-striped'>\n\r";
 			$this->html.="<tr><th>Datum</th><th>Einnahmen</th><th>Ausgaben</th><th>Defizit</th></tr>";
 			$dateTime = new DateTime('first day of this month');
 			$debt_char=array("+","-");
-            for ($i_month = 1; $i_month <= 6; $i_month++) {
+            for ($i_month = 1; $i_month <= $months; $i_month++) {
                 $date_last6[$i_month-1] = $dateTime->format('Y-m');
                 $this->html.="\n\r<tr><td><a href='?h=dm&p=".$date_last6[$i_month-1]."'>".$date_last6[$i_month-1]."</a></td><td>";
                 for ($i_debt = 0;$i_debt <= 1; $i_debt++){
@@ -42,9 +64,7 @@ class BudgetBook {
                 $this->html.="<td>".$debit_total."</td></tr>";
                 $dateTime->modify('-1 month');
             }
-            $this->html.="</tr></table>\n\r<br><br>";
-            $this->table_print("now",$conn,50);
-			return true;
+            $this->html.="</tr></table>\n\r<br>";
 	}
 	
 	function detail($date,$conn){
@@ -81,12 +101,41 @@ class BudgetBook {
             for ($i=0;$i<=count($row2)-1;$i++){
                 $this->html.="<td>".$row2[$table_colums[$i]]."</td>";    
             }
-            $this->html.="<td><a href='?h=kill&p=".$row2['id']."'><i class='bi bi-x-circle'></i></a></td>";
+            $this->html.="<td><a href='?h=edit&p=".$row2['id']."'>";
+            $this->html.=$this->button("edit");
+            $this->html.="</a></td>";
+            $this->html.="<td><a href='?h=kill&p=".$row2['id']."' onclick=\"return confirm('Löschen von ID:".$row2['id']."');\">";
+            $this->html.=$this->button("kill");
+            $this->html.="</a></td>";
             $this->html.="</tr>";
           }
         }
         $this->html.="</table>";
 	    return true;
+	}
+	
+	function entry($type,$id,$conn){
+	    $this->html = "Eintrag hinzufügen / bearbeiten";
+	    $this->html.= "<form action='?' method='get'>";
+	    $this->html.=' <div class="row">
+                          <div class="col-2 col-sm-1">Datum</div>
+                          <div class="col-2 col-sm-1"><input type="text" name="datum" id="datepicker"></div>';
+        $this->html.=' <div class="row">
+                          <div class="col-3 col-sm-1">betrag</div>
+                          <div class="col-3 col-sm-2"><input type="text" id="betrag" name="betrag"></div>';   
+        $this->html.="<div class='col-3 col-sm-2'><select name='debit' id='debit'><option value='-'>-</option><option value='+'>+</option></select></div>";
+        $rows_add = array('was','wo','info');
+         for ($i=0;$i<=count($rows_add)-1;$i++){
+	            $this->html.="<div class='w-100'></div>";
+                $this->html.="<div class='col-2 col-sm-1'>".$rows_add[$i]."</div>";
+                $this->html.="<div class='col-2 col-sm-1'><input type='text' id='".$rows_add[$i]."' name='".$rows_add[$i]."'></div>";
+        }
+        $this->html.="<input type='hidden' name='h' value='put'>";
+        $this->html.="<div class='w-100'></div>";
+	    $this->html.="<div class='col-1 col-sm-1'><input type='submit' value='Submit'></div>";           
+        $this->html.='</div>';
+        $this->html.="</form>";
+        return true;
 	}
 	
 	function add(){
@@ -112,7 +161,7 @@ class BudgetBook {
 	        return true;
   
 	}
-	
+
 	function put($values,$conn){
 	        $sql = "INSERT INTO history (datum, was, art, wo, betrag, info, debit) VALUES (";
 	        $new_date_array=explode(".", $values['datum']);
@@ -169,11 +218,11 @@ $hh = new BudgetBook();
         <?php
             switch($_GET['h']) {
                 case 'view':
-                    $hh->view($conn);
+                    $hh->overview($conn);
                     echo $hh->html;
                     break;
                 case 'add':
-                    $hh->add();
+                    $hh->entry("add",0,$conn);
                     echo $hh->html;
                     break;
                 case 'put':
@@ -184,6 +233,11 @@ $hh = new BudgetBook();
                     $hh->kill($_GET['p'],$conn);
                     echo $hh->html;
                     break;
+                case 'edit':
+                    $hh->entry("edit",$_GET['p'],$conn);
+                    echo $hh->html;
+                    break;
+                
                 case 'dm' : 
                     $hh->detail($_GET['p'],$conn);
                     echo $hh->html;
